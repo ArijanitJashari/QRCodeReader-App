@@ -8,6 +8,7 @@
     "eject": "expo eject"
   },
   "dependencies": {
+    "@expo/ngrok": "^2.5.0",
     "@expo/webpack-config": "^0.17.0",
     "@remobile/react-native-mongoose": "^1.0.1",
     "axios": "^0.26.1",

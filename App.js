@@ -1,23 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Text, View, StyleSheet, Button } from "react-native";
 import { BarCodeScanner } from "expo-barcode-scanner";
-import { BASE_URL } from "@env";
-
-export default function App() {
-  
-  const barcode = 'https://store.pecb.com//verify/qr/2536/$2y$10$dvCp1oD2lXyAFJTmX3reouj59wRHhUFLFj2YxJLbFFpVT.Yd/ZUsm';
-  const barcode2 = 'https://store.pecb.com//verify/qr/2126/$2y$10$q23q0AG.UF1EUhvlFyBTJu1r6oLgR1Ka8IZDlzQ6PIzCjxebNJdli'
-  const conference = '1';
  
-  const test_Id = 2536;
-  const test_Hash = '$2y$10$dvCp1oD2lXyAFJTmX3reouj59wRHhUFLFj2YxJLbFFpVT.Yd/ZUsm';
-  
+export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [text, setText] = useState("Not yet scanned");
   const axios = require("axios");
-  var qrId = 0;
-  var qrHash = '';
+
   const askForCameraPermission = () => {
     (async () => {
       const { status } = await BarCodeScanner.requestPermissionsAsync();
@@ -26,61 +16,55 @@ export default function App() {
   };
 
   // Request Camera Permission
-  useEffect(() => {   
-    format(barcode2)
-    scanTicket(barcode)
+  useEffect(() => {
     askForCameraPermission();
   }, []);
 
-  const format = async (qrCode)=> {
-      const split = qrCode.split("/");
-      const id = split[6];
-      qrId = parseInt(id);
-      qrHash = qrCode.split('/').splice(7).join('/')
-      console.log('qrId', qrId, 'qrHash', qrHash)
+  const format = async (qrCode) => {
+    const split = qrCode.split("/");
+    const id = split[6];
+    qrId = parseInt(id);
+    qrHash = qrCode.split('/').splice(7).join('/')
+    console.log('Ticket_id', qrId, 'Ticket_hash', qrHash)
   }
-  
+
   const scanTicket = async (ticket_id) => {
-    console.log("Scanning Ticket");
+    setText('Loading...')
+    console.log("Scanning Ticket", ticket_id);
     format(ticket_id);
+
     const purchasedTicket = 'http://conferenceticketlb-354391346.us-east-1.elb.amazonaws.com/api/ticket/purchased-ticket?'
     const register = 'http://conferenceticketlb-354391346.us-east-1.elb.amazonaws.com/api/ticket/register'
-    const checkTicket = 'http://conferenceticketlb-354391346.us-east-1.elb.amazonaws.com/api/ticket/check-ticket?'
-    const registerParcitipation = 'http://conferenceticketlb-354391346.us-east-1.elb.amazonaws.com/api/ticket/register-parcitipation'
-     
-    await axios
-      .get(
-        purchasedTicket + 'Id=' + qrId + '&hash=' + qrHash,
-        {},
+  
+    console.log('get', purchasedTicket + 'Id=' + qrId + '&hash=' + qrHash)
+    try {
+      const response = await axios.get(purchasedTicket + 'Id=' + qrId + '&hash=' + qrHash,
         {
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': '*',
-            Accept: "application/json",
-          },
-        }
-      )
-      .then((response) => {
-        setText(response.data.message);
-        console.log(response.data.data.id);
-         axios
-        .post(
-          register,
-          {},
-          {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              'Access-Control-Allow-Headers': '*',
-              Accept: "application/json",
-            },
           }
-        )
-        
-      })
-      .catch((error) => {
-        console.log('eeerr',error);
-      })
-      .finally(() => {});
+        });
+      const obj = response.data[0].order[0];
+      obj.hash = qrHash;
+      console.log('purchasedTicket', response.status)
+
+      const objJson = JSON.stringify(obj);
+
+      setText('OK, User found')
+      const responseRegister = await axios.post(register, objJson,
+        {
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': '*',
+            'Content-Type': 'application/json'
+          }
+        });
+      console.log('responseRegister', responseRegister.status)
+    } catch (error) {
+      setText("Error, Try Again");
+      console.log('error', error)
+    }
   };
 
   // What happens when we scan the bar code
@@ -100,6 +84,7 @@ export default function App() {
       </View>
     );
   }
+
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
@@ -126,7 +111,7 @@ export default function App() {
       {scanned && (
         <Button
           title={"Scan again?"}
-          onPress={() => setScanned(false)}
+          onPress={() => (setScanned(false), setText("Scanning...."))}
           color="green"
         />
       )}
