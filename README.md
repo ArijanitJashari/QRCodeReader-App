@@ -1,3 +1,3 @@
-# QRCode-ConferencRoomCheck
+# QRCodeReader-App
 - npm install 
 - expo start 
